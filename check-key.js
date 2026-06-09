@@ -28,7 +28,7 @@ export default async function handler(request) {
   try {
     // 🔴 GANTI LINK DI BAWAH INI PAKE LINK RAW RENTRY LU YANG DI STEP 1 KANAN!
     // Ditambah '?v=' + Date.now() biar Vercel selalu ambil yang terbaru (anti-cache)
-    const rentryRawUrl = "https://rentry.co/lukyy-database-secret/raw?v=" + Date.now();
+    const rentryRawUrl = "https://rentry.co/lukyydatabase/raw?v=" + Date.now();
 
     const response = await fetch(rentryRawUrl);
     if (!response.ok) {
