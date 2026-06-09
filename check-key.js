@@ -10,7 +10,7 @@ export default async function handler(request) {
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
-  // Handle preflight request (OPTIONS) dari browser
+  // Handle preflight request (OPTIONS) dari browser sebelum menembak API
   if (request.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -27,20 +27,14 @@ export default async function handler(request) {
   }
 
   try {
-    // 🔒 Otomatis mengambil link Rentry rahasia dari Environment Variables yang lu isi tadi
-    const baseRentryUrl = process.env.RENTRY_URL;
-    
-    if (!baseRentryUrl) {
-      return new Response(JSON.stringify({ status: "error", message: "Konfigurasi RENTRY_URL di Vercel belum diset" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
-    }
+    // 🔴 TULIS LINK RAW RENTRY RAHAISIA LU LANGSUNG DI SINI!
+    // Wajib pastikan ada kata '/raw' di ujung link-nya!
+    const baseRentryUrl = "https://rentry.co/lukyydatabase/raw";
 
     // Ditambahkan '?v=' + Date.now() agar Vercel selalu mengambil data paling fresh (anti-cache)
-    const rentryRawUrl = `${baseRentryUrl.replace(/\/$/, "")}?v=${Date.now()}`;
+    const rentryRawUrl = `${baseRentryUrl}?v=${Date.now()}`;
     
-    // Server Vercel melakukan fetch ke Rentry rahasia (Aman, user gak bisa ngintip)
+    // Server Vercel yang nge-fetch ke Rentry (User panel gak bakal bisa liat link ini)
     const response = await fetch(rentryRawUrl);
     if (!response.ok) {
       throw new Error("Gagal mengambil data dari database rahasia");
@@ -64,6 +58,25 @@ export default async function handler(request) {
           return new Response(JSON.stringify({ status: "success", type: "temporary", expiresAt: parsedExpiry }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           });
+        } else {
+          return new Response(JSON.stringify({ status: "expired" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+    } else {
+      return new Response(JSON.stringify({ status: "invalid" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+  } catch (err) {
+    return new Response(JSON.stringify({ status: "error", message: "Internal Server Error atau JSON Rentry Rusak" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+}          });
         } else {
           return new Response(JSON.stringify({ status: "expired" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
