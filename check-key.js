@@ -1,20 +1,21 @@
 export const config = {
-  runtime: 'edge', // Memakai Edge runtime biar super cepat
+  runtime: 'edge', // Memakai Edge runtime biar prosesnya secepat kilat
 };
 
 export default async function handler(request) {
-  // Setup CORS agar script bookmarklet lu di domain mana pun bisa ngakses
+  // Setup CORS Headers agar panel Bookmarklet lu bisa akses dari domain mana pun
   const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
   };
 
+  // Handle preflight request (OPTIONS) dari browser
   if (request.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Mengambil parameter '?key=...' dari URL yang dikirim script client
+  // Ambil parameter '?key=...' dari URL yang dikirim script client
   const { searchParams } = new URL(request.url);
   const userKey = searchParams.get("key")?.toLowerCase().trim();
 
@@ -26,10 +27,20 @@ export default async function handler(request) {
   }
 
   try {
-    // 🔴 GANTI LINK DI BAWAH INI PAKE LINK RAW RENTRY LU YANG DI STEP 1 KANAN!
-    // Ditambah '?v=' + Date.now() biar Vercel selalu ambil yang terbaru (anti-cache)
-    const rentryRawUrl = "https://rentry.co/lukyydatabase/raw?v=" + Date.now();
+    // 🔒 Otomatis mengambil link Rentry rahasia dari Environment Variables yang lu isi tadi
+    const baseRentryUrl = process.env.RENTRY_URL;
+    
+    if (!baseRentryUrl) {
+      return new Response(JSON.stringify({ status: "error", message: "Konfigurasi RENTRY_URL di Vercel belum diset" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
 
+    // Ditambahkan '?v=' + Date.now() agar Vercel selalu mengambil data paling fresh (anti-cache)
+    const rentryRawUrl = `${baseRentryUrl.replace(/\/$/, "")}?v=${Date.now()}`;
+    
+    // Server Vercel melakukan fetch ke Rentry rahasia (Aman, user gak bisa ngintip)
     const response = await fetch(rentryRawUrl);
     if (!response.ok) {
       throw new Error("Gagal mengambil data dari database rahasia");
@@ -37,8 +48,8 @@ export default async function handler(request) {
 
     const data = await response.json();
     const validKeys = data.keys || {};
-
-    // Logic pengecekan key di dalam server Vercel
+    
+    // Proses validasi/pencocokan key di dalam server Vercel
     if (validKeys.hasOwnProperty(userKey)) {
       const expiry = validKeys[userKey];
       const currentTime = Date.now();
@@ -66,7 +77,7 @@ export default async function handler(request) {
     }
 
   } catch (err) {
-    return new Response(JSON.stringify({ status: "error", message: "Internal Server Error" }), {
+    return new Response(JSON.stringify({ status: "error", message: "Internal Server Error atau JSON Rentry Rusak" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
